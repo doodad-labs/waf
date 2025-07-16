@@ -24,10 +24,24 @@ jobs:
           cargo install grcov
       - name: Run tests with coverage
         run: |
+          # Create directory for profraw files first
+          mkdir -p target/llvm-cov-profile
+          
+          # Set profiling environment variables
           export RUSTFLAGS="-Cinstrument-coverage"
-          export LLVM_PROFILE_FILE="rust-coverage-%p-%m.profraw"
+          export LLVM_PROFILE_FILE="target/llvm-cov-profile/rust-coverage-%p-%m.profraw"
+          
+          # Run tests
           cargo test --workspace --verbose
-          grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing -o ./coverage.lcov
+          
+          # Generate coverage report
+          grcov target/llvm-cov-profile \
+            --binary-path ./target/debug/ \
+            -s . \
+            -t lcov \
+            --branch \
+            --ignore-not-existing \
+            -o ./coverage.lcov
       - name: Upload to Codacy
         env:
           CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_COVERAGE }}
