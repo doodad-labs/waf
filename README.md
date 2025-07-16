@@ -26,4 +26,4 @@ A high-performance, standalone **Web Application Firewall (WAF) proxy** that sit
 
 Version | Test Result | Coverage | Vulnrability Status
 --------|-------------|----------|--------------------
-Latest Commit | [![Rust](https://github.com/doodad-labs/waf/actions/workflows/rust.yml/badge.svg)](https://github.com/doodad-labs/waf/actions/workflows/rust.yml) | ?? | ??
+Latest Commit | ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/doodad-labs/waf/rust.yml?style=for-the-badge&label=%20) | ![Codacy coverage](https://img.shields.io/codacy/coverage/85f7bc2e552544508b0c5a10a05cd5a3?style=for-the-badge&label=%20) | ??
