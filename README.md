@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> Development Notice: This project is pre-release software. Use development builds at your own risk.
+
 # waf *(to be named)* 
 
 A high-performance, standalone **Web Application Firewall (WAF) proxy** that sits between the internet and any backend server (PHP, Node.js, Rust, Wordpress, Etc.).
