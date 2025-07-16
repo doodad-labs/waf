@@ -21,3 +21,9 @@ A high-performance, standalone **Web Application Firewall (WAF) proxy** that sit
 - SIEM-compatible reporting format
 - Non-intrusive challenge mechanisms
 - Configurable data anonymization
+
+## Testing
+
+Version | Test Result | Coverage | Vulnrability Status
+--------|-------------|----------|--------------------
+Latest Commit | [![Rust](https://github.com/doodad-labs/waf/actions/workflows/rust.yml/badge.svg)](https://github.com/doodad-labs/waf/actions/workflows/rust.yml) | ?? | ??
