@@ -1,6 +1,7 @@
 name: Rust CI with Codacy Coverage
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "main" ]
     paths:
