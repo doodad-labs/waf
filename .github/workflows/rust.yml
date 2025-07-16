@@ -1,4 +1,4 @@
-name: Rust
+name: Rust CI with Codacy Coverage
 
 on:
   push:
@@ -10,13 +10,36 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  test-and-coverage:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      # Install grcov (coverage tool)
+      - name: Install grcov
+        run: |
+          rustup component add llvm-tools-preview
+          cargo install grcov
+
+      # Generate coverage (using grcov + llvm-profdata)
+      - name: Run tests with coverage
+        run: |
+          export RUSTFLAGS="-Cinstrument-coverage"
+          export LLVM_PROFILE_FILE="rust-coverage-%p-%m.profraw"
+          cargo test --workspace --verbose
+          grcov . --binary-path ./target/debug/ -s . -t lcov --branch --ignore-not-existing -o ./coverage.lcov
+
+      # Upload to Codacy (requires CODACY_PROJECT_TOKEN in GitHub Secrets)
+      - name: Upload coverage to Codacy
+        env:
+          CODACY_PROJECT_TOKEN: ${{ secrets.CODACY_COVERAGE }}  # Make sure this secret exists!
+        run: |
+          bash <(curl -Ls https://coverage.codacy.com/get.sh) report -l Rust -r ./coverage.lcov
