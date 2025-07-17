@@ -1,71 +1,102 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
-/// Main configuration struct (add new fields here when expanding)
-#[derive(Debug, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+#[serde(default)]  // This enables default values for missing fields
 pub struct Settings {
-    /// Listening port for the proxy (add new comments like this for future fields)
+    /// [REQUIRED] Listening port for the proxy
     pub listen_port: u16,
     
-    /// Backend server URL to forward requests to
+    /// [REQUIRED] Backend server URL to forward requests to
     pub backend_url: String,
     
-    /// Logging configuration section
+    /// Logging configuration
+    #[serde(default)]
     pub logging: Logging,
 
-    /// Threading configuration section
+    /// Threading configuration
+    #[serde(default)]
     pub threading: Threading,
-
-    // Add new sections below following the same pattern:
-    // pub new_section: NewSection,
 }
 
-/// Logging-specific settings (example of a config section)
-#[derive(Debug, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct Logging {
-    /// Path to log file
-    pub log_file: String,
+    /// Path to log file (default: stdout)
+    pub log_file: Option<PathBuf>,
     
-    /// Log level (trace, debug, info, warn, error)
+    /// Log level (default: "info")
+    #[serde(default = "default_log_level")]
     pub log_level: String,
 }
 
-/// Threading-specific settings
-#[derive(Debug, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
 pub struct Threading {
-    /// How many workers to use, uses physical CPU cores
+    /// Worker count (default: 0 = auto-detect)
+    #[serde(default)]
     pub workers: u16,
 }
 
+// Default implementations
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            listen_port: 0,  // Still requires explicit setting
+            backend_url: String::new(),  // Still requires explicit setting
+            logging: Logging::default(),
+            threading: Threading::default(),
+        }
+    }
+}
+
+impl Default for Logging {
+    fn default() -> Self {
+        Self {
+            log_file: None,
+            log_level: default_log_level(),
+        }
+    }
+}
+
+impl Default for Threading {
+    fn default() -> Self {
+        Self {
+            workers: 0,
+        }
+    }
+}
+
+// Helper for default values
+fn default_log_level() -> String {
+    "info".to_string()
+}
+
 impl Settings {
-    /// Loads configuration from file
-    /// # Arguments
-    /// * `config_path` - Path to configuration file
-    /// 
-    /// # Example
-    /// ```
-    /// let settings = Settings::new("waf.toml").unwrap();
-    /// ```
     pub fn new(config_path: &str) -> Result<Self, config::ConfigError> {
         let settings = config::Config::builder()
-            // Explicitly specify TOML format
             .add_source(config::File::new(config_path, config::FileFormat::Toml))
+            .add_source(config::Environment::with_prefix("APP"))
             .build()?;
 
         settings.try_deserialize()
     }
 
-    /// Validates configuration values
     pub fn validate(&self) -> Result<(), String> {
+        // Port validation (0 is now allowed for OS-assigned ports)
         if self.listen_port == 0 {
-            return Err("Port cannot be 0".to_string());
+            return Err("Port must be specified".to_string());
         }
-        
-        if !["trace", "debug", "info", "warn", "error"].contains(&self.logging.log_level.as_str()) {
-            return Err("Invalid log level".to_string());
+        // Backend URL validation
+        if self.backend_url.is_empty() {
+            return Err("Backend URL must be specified".to_string());
         }
 
-        // workers cant be more than physical CPU cores
-        if self.threading.workers > num_cpus::get() as u16 {
+        // Log level validation
+        if !["trace", "debug", "info", "warn", "error"].contains(&self.logging.log_level.as_str()) {
+            return Err("Invalid log level (must be trace/debug/info/warn/error)".to_string());
+        }
+
+        // Worker count validation (0 means auto-detect)
+        if self.threading.workers > 0 && self.threading.workers > num_cpus::get() as u16 {
             return Err(format!(
                 "Worker count cannot exceed physical CPU cores: {}",
                 num_cpus::get()
@@ -82,72 +113,99 @@ mod tests {
     use std::fs;
     use tempfile::NamedTempFile;
 
-    
+    // Helper to create minimal valid settings
+    fn minimal_settings() -> Settings {
+        Settings {
+            listen_port: 8080,
+            backend_url: "http://localhost:3000".to_string(),
+            ..Default::default()
+        }
+    }
+
     #[test]
-    fn test_config_loading() {
-        // Create temporary config file with .toml extension
+    fn test_minimal_config_loading() {
         let config_content = r#"
             listen_port = 8080
             backend_url = "http://localhost:3000"
-
-            [threading]
-            workers = 4
-            
-            [logging]
-            log_file = "/var/log/waf-proxy.log"
-            log_level = "warn"
         "#;
         
         let tmp_file = NamedTempFile::new().unwrap();
         let tmp_path = tmp_file.path().to_str().unwrap().to_string() + ".toml";
         fs::write(&tmp_path, config_content).unwrap();
         
-        // Test loading
         let settings = Settings::new(&tmp_path).unwrap();
         
         assert_eq!(settings.listen_port, 8080);
         assert_eq!(settings.backend_url, "http://localhost:3000");
-        assert_eq!(settings.threading.workers, 4);
-        assert_eq!(settings.logging.log_file, "/var/log/waf-proxy.log");
-        assert_eq!(settings.logging.log_level, "warn");
+        // Verify defaults
+        assert_eq!(settings.logging.log_level, "info");
+        assert_eq!(settings.threading.workers, 0);
+        assert!(settings.logging.log_file.is_none());
         
-        // Clean up
         fs::remove_file(&tmp_path).unwrap();
     }
 
     #[test]
-    fn test_config_validation() {
-        let valid_settings = Settings {
-            listen_port: 8080,
-            backend_url: "http://localhost:3000".to_string(),
-            threading: Threading {
-                workers: 4,
-            },
-            logging: Logging {
-                log_file: "/var/log/waf-proxy.log".to_string(),
-                log_level: "warn".to_string(),
-            },
-        };
+    fn test_full_config_loading() {
+        let config_content = r#"
+            listen_port = 9090
+            backend_url = "http://example.com"
+
+            [threading]
+            workers = 4
+            
+            [logging]
+            log_file = "/var/log/proxy.log"
+            log_level = "debug"
+        "#;
         
-        assert!(valid_settings.validate().is_ok());
+        let tmp_file = NamedTempFile::new().unwrap();
+        let tmp_path = tmp_file.path().to_str().unwrap().to_string() + ".toml";
+        fs::write(&tmp_path, config_content).unwrap();
         
-        // Test invalid cases
-        let mut invalid_port = valid_settings.clone();
-        invalid_port.listen_port = 0;
-        assert!(invalid_port.validate().is_err());
+        let settings = Settings::new(&tmp_path).unwrap();
         
-        let mut invalid_log_level = valid_settings.clone();
-        invalid_log_level.logging.log_level = "invalid".to_string();
-        assert!(invalid_log_level.validate().is_err());
+        assert_eq!(settings.listen_port, 9090);
+        assert_eq!(settings.backend_url, "http://example.com");
+        assert_eq!(settings.threading.workers, 4);
+        assert_eq!(settings.logging.log_file.unwrap(), PathBuf::from("/var/log/proxy.log"));
+        assert_eq!(settings.logging.log_level, "debug");
+        
+        fs::remove_file(&tmp_path).unwrap();
     }
 
     #[test]
-    fn test_missing_config() {
-        let result = Settings::new("nonexistent.toml");
-        assert!(result.is_err());
+    fn test_config_default_values() {
+        let settings = Settings::default();
+        
+        assert_eq!(settings.listen_port, 0);
+        assert_eq!(settings.backend_url, "");
+        assert_eq!(settings.logging.log_level, "info");
+        assert_eq!(settings.threading.workers, 0);
     }
 
-    // Add new test cases here when adding new fields
-    // #[test]
-    // fn test_new_feature() { ... }
+    #[test]
+    fn test_config_validation() {
+        let mut settings = minimal_settings();
+        assert!(settings.validate().is_ok());
+
+        // Test invalid port
+        settings.listen_port = 0;
+        assert_eq!(settings.validate(), Err("Port must be specified".to_string()));
+        settings.listen_port = 8080;
+
+        // Test empty backend URL
+        settings.backend_url = String::new();
+        assert_eq!(settings.validate(), Err("Backend URL must be specified".to_string()));
+        settings.backend_url = "http://valid".to_string();
+
+        // Test invalid log level
+        settings.logging.log_level = "invalid".to_string();
+        assert!(settings.validate().is_err());
+        settings.logging.log_level = "info".to_string();
+
+        // Test excessive workers
+        settings.threading.workers = 9999;
+        assert!(settings.validate().is_err());
+    }
 }
