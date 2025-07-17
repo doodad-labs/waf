@@ -7,6 +7,7 @@
 
 mod config;
 mod proxy;
+mod firewall;
 
 use std::{env, path::PathBuf};
 

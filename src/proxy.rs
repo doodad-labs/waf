@@ -1,4 +1,5 @@
 use crate::config;
+use crate::firewall;
 
 use futures_util::TryStreamExt;
 use ntex::http;
@@ -21,6 +22,8 @@ async fn forward(
     let mut new_url = forward_url.get_ref().clone();
     new_url.set_path(req.uri().path());
     new_url.set_query(req.uri().query());
+
+    firewall::inspect(&req, &new_url).await;
 
     // Create forwarded request
     let mut forwarded_req = client.request_from(new_url.as_str(), req.head());
@@ -65,10 +68,6 @@ pub async fn run(settings: &config::Settings) -> std::io::Result<()> {
             .state(forward_url.clone())
             .wrap(web::middleware::Logger::default())
             .default_service(web::route().to(forward))
-        /* .service(
-            web::resource("/{tail:.*}")
-                .route(web::get().to(capture_ws))
-        ) */
     })
     .bind(("0.0.0.0", settings.listen_port))?;
 
