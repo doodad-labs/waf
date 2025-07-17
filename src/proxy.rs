@@ -1,11 +1,12 @@
 use crate::config;
 
 use futures_util::TryStreamExt;
-use ntex::{http, web};
+use ntex::http;
+use ntex::web;
 
 const EXCLUDED_HEADERS: &[&str] = &[
     "host",
-    "content-length",  // Let ntex handle this automatically
+    "content-length", // Let ntex handle this automatically
     "connection",
 ];
 
@@ -15,6 +16,7 @@ async fn forward(
     client: web::types::State<http::Client>,
     forward_url: web::types::State<url::Url>,
 ) -> Result<web::HttpResponse, web::Error> {
+
     // Build the target URL
     let mut new_url = forward_url.get_ref().clone();
     new_url.set_path(req.uri().path());
@@ -22,7 +24,7 @@ async fn forward(
 
     // Create forwarded request
     let mut forwarded_req = client.request_from(new_url.as_str(), req.head());
-    
+
     // Copy important headers (optional)
     for (key, value) in req.headers().iter() {
         if !EXCLUDED_HEADERS.contains(&key.as_str()) {
@@ -38,7 +40,7 @@ async fn forward(
 
     // Build response with all headers and streaming body
     let mut client_resp = web::HttpResponse::build(res.status());
-    
+
     // Copy response headers
     for (key, value) in res.headers().iter() {
         client_resp.header(key.clone(), value.clone());
@@ -48,28 +50,36 @@ async fn forward(
 }
 
 pub async fn run(settings: &config::Settings) -> std::io::Result<()> {
-
-    println!("Proxy server running at http://localhost:{} fowarding to {}", settings.listen_port, settings.backend_url);
+    println!(
+        "Proxy server running at http://localhost:{} fowarding to {}",
+        settings.listen_port, settings.backend_url
+    );
 
     let forward_url = settings.backend_url.to_owned();
     let forward_url = url::Url::parse(&forward_url)
         .map_err(|err| std::io::Error::new(std::io::ErrorKind::InvalidData, err))?;
+
     let server = web::server(move || {
         web::App::new()
             .state(http::Client::new())
             .state(forward_url.clone())
             .wrap(web::middleware::Logger::default())
             .default_service(web::route().to(forward))
+        /* .service(
+            web::resource("/{tail:.*}")
+                .route(web::get().to(capture_ws))
+        ) */
     })
     .bind(("0.0.0.0", settings.listen_port))?;
-    
+
     let server = if settings.threading.workers > 0 {
         server.workers(settings.threading.workers.into())
     } else {
         server
     };
-    
-    server.run()
-    .await
-    .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err))
+
+    server
+        .run()
+        .await
+        .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err))
 }

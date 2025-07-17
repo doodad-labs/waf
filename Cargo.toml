@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 config = "0.15.13"  # For layered configuration
+futures = "0.3.31"
 futures-util = "0.3.31"
 ntex = { version = "2.15.0", features = ["tokio"] }
 num_cpus = "1.17.0"
