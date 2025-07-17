@@ -5,12 +5,12 @@ edition = "2021"
 
 [dependencies]
 config = "0.15.13"  # For layered configuration
+futures-util = "0.3.31"
+ntex = { version = "2.15.0", features = ["tokio"] }
+num_cpus = "1.17.0"
 serde = { version = "1.0", features = ["derive"] }  # For deserialization
-hyper = { version = "0.14", features = ["full"] }
 tokio = { version = "1", features = ["full"] }
-log = "0.4"
-env_logger = "0.9"
-futures = "0.3"
+url = "2.5.4"
 
 [dev-dependencies]
 tempfile = "3.20.0"  # For creating temporary files in tests

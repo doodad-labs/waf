@@ -17,7 +17,7 @@ use std::{env, path::PathBuf};
 /// - Config file not found or invalid
 /// - Invalid path encoding
 /// - Configuration validation failures
-#[tokio::main]
+#[ntex::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get config path from args or default to "waf.toml" in current directory
     let config_path = if let Some(arg_path) = env::args().nth(1) {
@@ -35,9 +35,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let settings = config::Settings::new(config_str)?;
     settings.validate()?;
     println!("Loaded config from {}: {:#?}", config_str, settings);
-    
-    proxy::run(&settings).await?; 
 
+    proxy::run(&settings).await?;
     Ok(())
 }
 

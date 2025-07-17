@@ -11,6 +11,10 @@ pub struct Settings {
     
     /// Logging configuration section
     pub logging: Logging,
+
+    /// Threading configuration section
+    pub threading: Threading,
+
     // Add new sections below following the same pattern:
     // pub new_section: NewSection,
 }
@@ -23,6 +27,13 @@ pub struct Logging {
     
     /// Log level (trace, debug, info, warn, error)
     pub log_level: String,
+}
+
+/// Threading-specific settings
+#[derive(Debug, Deserialize, PartialEq, Clone)]
+pub struct Threading {
+    /// How many workers to use, uses physical CPU cores
+    pub workers: u16,
 }
 
 impl Settings {
@@ -52,6 +63,14 @@ impl Settings {
         if !["trace", "debug", "info", "warn", "error"].contains(&self.logging.log_level.as_str()) {
             return Err("Invalid log level".to_string());
         }
+
+        // workers cant be more than physical CPU cores
+        if self.threading.workers > num_cpus::get() as u16 {
+            return Err(format!(
+                "Worker count cannot exceed physical CPU cores: {}",
+                num_cpus::get()
+            ));
+        }
         
         Ok(())
     }
@@ -70,6 +89,9 @@ mod tests {
         let config_content = r#"
             listen_port = 8080
             backend_url = "http://localhost:3000"
+
+            [threading]
+            workers = 4
             
             [logging]
             log_file = "/var/log/waf-proxy.log"
@@ -85,6 +107,7 @@ mod tests {
         
         assert_eq!(settings.listen_port, 8080);
         assert_eq!(settings.backend_url, "http://localhost:3000");
+        assert_eq!(settings.threading.workers, 4);
         assert_eq!(settings.logging.log_file, "/var/log/waf-proxy.log");
         assert_eq!(settings.logging.log_level, "warn");
         
@@ -97,6 +120,9 @@ mod tests {
         let valid_settings = Settings {
             listen_port: 8080,
             backend_url: "http://localhost:3000".to_string(),
+            threading: Threading {
+                workers: 4,
+            },
             logging: Logging {
                 log_file: "/var/log/waf-proxy.log".to_string(),
                 log_level: "warn".to_string(),
