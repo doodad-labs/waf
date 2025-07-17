@@ -7,7 +7,7 @@ use ntex::web;
 
 const EXCLUDED_HEADERS: &[&str] = &[
     "host",
-    "content-length", // Let ntex handle this automatically
+    "content-length", // ntex handles this automatically
     "connection",
 ];
 
