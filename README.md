@@ -3,7 +3,7 @@
 
 # waf *(to be named)* 
 
-A high-performance, standalone **Web Application Firewall (WAF) proxy** that sits between the internet and any backend server (PHP, Node.js, Rust, Wordpress, Etc.).
+A high-performance, standalone **Web Application Firewall (WAF) foward proxy** that sits between the internet and any backend server (PHP, Node.js, Rust, Wordpress, Etc.).
 
 ## Planned Features
 
@@ -21,6 +21,9 @@ A high-performance, standalone **Web Application Firewall (WAF) proxy** that sit
 - SIEM-compatible reporting format
 - Non-intrusive challenge mechanisms
 - Configurable data anonymization
+
+## Current Issues
+- [ ] Websockets are not supported
 
 ## Testing
 
