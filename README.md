@@ -22,6 +22,9 @@ A high-performance, standalone **Web Application Firewall (WAF) foward proxy** t
 - Non-intrusive challenge mechanisms
 - Configurable data anonymization
 
+## Current Issues
+- [ ] Websockets are not supported
+
 ## Testing
 
 Branch | Test Result | Coverage | Code Quality
