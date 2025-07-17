@@ -6,6 +6,8 @@
 //! 2. `waf.toml` in current working directory
 
 mod config;
+mod proxy;
+
 use std::{env, path::PathBuf};
 
 /// Main application entry point
@@ -15,7 +17,8 @@ use std::{env, path::PathBuf};
 /// - Config file not found or invalid
 /// - Invalid path encoding
 /// - Configuration validation failures
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get config path from args or default to "waf.toml" in current directory
     let config_path = if let Some(arg_path) = env::args().nth(1) {
         PathBuf::from(arg_path)
@@ -33,6 +36,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     settings.validate()?;
     println!("Loaded config from {}: {:#?}", config_str, settings);
     
+    proxy::run(&settings).await?; 
+
     Ok(())
 }
 
