@@ -14,15 +14,6 @@ A high-performance, standalone **Web Application Firewall (WAF) proxy** that sit
 - [ ] **Challenge Captchas** - Deploy interactive challenges for suspicious traffic verification
 - [ ] **Privacy Options** - Anonymize user data while maintaining security protections
 
-### Key Technical Aspects
-
-- Behavioral fingerprinting for AI/scraper detection
-- Request pattern analysis engine
-- Webhook/SMTP alert integration
-- SIEM-compatible reporting format
-- Non-intrusive challenge mechanisms
-- Configurable data anonymization
-
 ## Testing
 
 Branch | Test Result | Coverage | Code Quality
