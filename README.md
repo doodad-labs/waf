@@ -7,12 +7,12 @@ A high-performance, standalone **Web Application Firewall (WAF) proxy** that sit
 
 ## Planned Features
 
-- **AI Blocking** - Detect and block AI agents/scrapers using behavioral analysis and fingerprinting techniques
-- **Scraper Blocking** - Prevent automated scraping tools through advanced request pattern detection
-- **Realtime Alerts** - Immediate notifications for active threats with severity classification
-- **Reporting** - Comprehensive security logs with export capabilities for analysis
-- **Challenge Captchas** - Deploy interactive challenges for suspicious traffic verification
-- **Privacy Options** - Anonymize user data while maintaining security protections
+- [ ] **AI Blocking** - Detect and block AI agents/scrapers using behavioral analysis and fingerprinting techniques
+- [ ] **Scraper Blocking** - Prevent automated scraping tools through advanced request pattern detection
+- [ ] **Realtime Alerts** - Immediate notifications for active threats with severity classification
+- [ ] **Reporting** - Comprehensive security logs with export capabilities for analysis
+- [ ] **Challenge Captchas** - Deploy interactive challenges for suspicious traffic verification
+- [ ] **Privacy Options** - Anonymize user data while maintaining security protections
 
 ### Key Technical Aspects
 
@@ -22,10 +22,6 @@ A high-performance, standalone **Web Application Firewall (WAF) proxy** that sit
 - SIEM-compatible reporting format
 - Non-intrusive challenge mechanisms
 - Configurable data anonymization
-
-## Current Issues
-
-- [ ] Websockets are not supported
 
 ## Testing
 
