@@ -6,5 +6,5 @@ webapp_url = "http://localhost:5173"
 workers = 12 # Set to 0 for auto-detection
 
 [logging]
-log_file = "/var/log/waf-proxy.log"
+log_file = "/var/log/waf.log"
 log_level = "warn"

@@ -8,6 +8,7 @@
 mod config;
 mod proxy;
 
+use colored::Colorize;
 use std::{env, path::PathBuf};
 
 /// Main application entry point
@@ -37,15 +38,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let display = [
         "\n".to_string(),
-        format!("waf v{}", env!("CARGO_PKG_VERSION")),
-        "\x1b[2mgithub.com/doodad-labs/waf\x1b[0m".to_string(),
+        format!("🪤  waf v{}", env!("CARGO_PKG_VERSION")),
+        "github.com/doodad-labs/waf".dimmed().to_string(),
         "".to_string(),
-        format!("Listening on port: {}", settings.listen_port),
         format!("Webapp URL: {}", settings.webapp_url),
         format!("WAF URL: http://localhost:{}", settings.listen_port),
         "".to_string(),
-        "Configuration loaded successfully.".to_string(),
-        "\n".to_string()
+        "Configuration loaded successfully.".to_string()
     ];
     
     let divider_length = display.iter()
@@ -56,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for line in display {
 
         if line.is_empty() {
-            println!("\x1b[34m{}\x1b[0m", "─".repeat(divider_length));
+            println!("{}", format!("{}", "─".repeat(divider_length)).truecolor(255, 233, 89));
             continue;
         }
 

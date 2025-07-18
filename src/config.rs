@@ -155,7 +155,7 @@ mod tests {
             workers = 4
             
             [logging]
-            log_file = "/var/log/proxy.log"
+            log_file = "/var/log/waf.log"
             log_level = "debug"
         "#;
         
@@ -168,7 +168,7 @@ mod tests {
         assert_eq!(settings.listen_port, 9090);
         assert_eq!(settings.webapp_url, "http://example.com");
         assert_eq!(settings.threading.workers, 4);
-        assert_eq!(settings.logging.log_file.unwrap(), PathBuf::from("/var/log/proxy.log"));
+        assert_eq!(settings.logging.log_file.unwrap(), PathBuf::from("/var/log/waf.log"));
         assert_eq!(settings.logging.log_level, "debug");
         
         fs::remove_file(&tmp_path).unwrap();
