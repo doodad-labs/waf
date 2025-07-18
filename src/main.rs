@@ -7,6 +7,7 @@
 
 mod config;
 mod proxy;
+mod waf;
 
 use colored::Colorize;
 use std::{env, path::PathBuf};
