@@ -12,7 +12,6 @@ url = "2.5.4"
 hyper = { version = "0.14", features = ["full"] }
 http = "1"
 tokio-tungstenite = "0.27.0"
-futures-util = "0.3.31"
 futures = "0.3.31"
 
 [dev-dependencies]

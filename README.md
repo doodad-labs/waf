@@ -14,6 +14,10 @@ A high-performance, standalone **Web Application Firewall (WAF) proxy** that sit
 - [ ] **Challenge Captchas** - Deploy interactive challenges for suspicious traffic verification
 - [ ] **Privacy Options** - Anonymize user data while maintaining security protections
 
+## Issues
+
+- **Websockets** - Websockets don't tunnel correctly resulting in issues establishing socket connections.
+
 ## Testing
 
 Branch | Test Result | Coverage | Code Quality

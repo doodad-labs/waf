@@ -79,8 +79,9 @@ async fn tunnel(upgraded: upgrade::Upgraded, ws_target: String) -> Result<(), Bo
 
     let url = url::Url::parse(&ws_target)?;
     let url_string = url.to_string();
-    let (ws_stream, _) = connect_async(url_string).await?;
 
+    println!("Initiating handshake with WebSocket URL: {}", url_string);
+    let (ws_stream, _) = connect_async(url_string).await?;
     println!("WebSocket handshake has been successfully completed");
 
     let (sink, mut stream) = ws_stream.split();
