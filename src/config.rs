@@ -7,8 +7,8 @@ pub struct Settings {
     /// [REQUIRED] Listening port for the proxy
     pub listen_port: u16,
     
-    /// [REQUIRED] Backend server URL to forward requests to
-    pub backend_url: String,
+    /// [REQUIRED] Webapp server URL to forward requests to
+    pub webapp_url: String,
     
     /// Logging configuration
     #[serde(default)]
@@ -41,7 +41,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             listen_port: 0,  // Still requires explicit setting
-            backend_url: String::new(),  // Still requires explicit setting
+            webapp_url: String::new(),  // Still requires explicit setting
             logging: Logging::default(),
             threading: Threading::default(),
         }
@@ -85,9 +85,9 @@ impl Settings {
         if self.listen_port == 0 {
             return Err("Port must be specified".to_string());
         }
-        // Backend URL validation
-        if self.backend_url.is_empty() {
-            return Err("Backend URL must be specified".to_string());
+        // Webapp URL validation
+        if self.webapp_url.is_empty() {
+            return Err("Webapp URL must be specified".to_string());
         }
 
         // Log level validation
@@ -117,7 +117,7 @@ mod tests {
     fn minimal_settings() -> Settings {
         Settings {
             listen_port: 8080,
-            backend_url: "http://localhost:3000".to_string(),
+            webapp_url: "http://localhost:3000".to_string(),
             ..Default::default()
         }
     }
@@ -126,7 +126,7 @@ mod tests {
     fn test_minimal_config_loading() {
         let config_content = r#"
             listen_port = 8080
-            backend_url = "http://localhost:3000"
+            webapp_url = "http://localhost:3000"
         "#;
         
         let tmp_file = NamedTempFile::new().unwrap();
@@ -136,7 +136,7 @@ mod tests {
         let settings = Settings::new(&tmp_path).unwrap();
         
         assert_eq!(settings.listen_port, 8080);
-        assert_eq!(settings.backend_url, "http://localhost:3000");
+        assert_eq!(settings.webapp_url, "http://localhost:3000");
         // Verify defaults
         assert_eq!(settings.logging.log_level, "info");
         assert_eq!(settings.threading.workers, 0);
@@ -149,7 +149,7 @@ mod tests {
     fn test_full_config_loading() {
         let config_content = r#"
             listen_port = 9090
-            backend_url = "http://example.com"
+            webapp_url = "http://example.com"
 
             [threading]
             workers = 4
@@ -166,7 +166,7 @@ mod tests {
         let settings = Settings::new(&tmp_path).unwrap();
         
         assert_eq!(settings.listen_port, 9090);
-        assert_eq!(settings.backend_url, "http://example.com");
+        assert_eq!(settings.webapp_url, "http://example.com");
         assert_eq!(settings.threading.workers, 4);
         assert_eq!(settings.logging.log_file.unwrap(), PathBuf::from("/var/log/proxy.log"));
         assert_eq!(settings.logging.log_level, "debug");
@@ -179,7 +179,7 @@ mod tests {
         let settings = Settings::default();
         
         assert_eq!(settings.listen_port, 0);
-        assert_eq!(settings.backend_url, "");
+        assert_eq!(settings.webapp_url, "");
         assert_eq!(settings.logging.log_level, "info");
         assert_eq!(settings.threading.workers, 0);
     }
@@ -194,10 +194,10 @@ mod tests {
         assert_eq!(settings.validate(), Err("Port must be specified".to_string()));
         settings.listen_port = 8080;
 
-        // Test empty backend URL
-        settings.backend_url = String::new();
-        assert_eq!(settings.validate(), Err("Backend URL must be specified".to_string()));
-        settings.backend_url = "http://valid".to_string();
+        // Test empty webapp URL
+        settings.webapp_url = String::new();
+        assert_eq!(settings.validate(), Err("Webapp URL must be specified".to_string()));
+        settings.webapp_url = "http://valid".to_string();
 
         // Test invalid log level
         settings.logging.log_level = "invalid".to_string();

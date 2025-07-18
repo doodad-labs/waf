@@ -7,7 +7,6 @@
 
 mod config;
 mod proxy;
-mod firewall;
 
 use std::{env, path::PathBuf};
 
@@ -18,7 +17,7 @@ use std::{env, path::PathBuf};
 /// - Config file not found or invalid
 /// - Invalid path encoding
 /// - Configuration validation failures
-#[ntex::main]
+#[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get config path from args or default to "waf.toml" in current directory
     let config_path = if let Some(arg_path) = env::args().nth(1) {
@@ -35,7 +34,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load and validate configuration
     let settings = config::Settings::new(config_str)?;
     settings.validate()?;
-    println!("Loaded config from {}: {:#?}", config_str, settings);
+
+    let display = [
+        "\n".to_string(),
+        format!("WAF v{}", env!("CARGO_PKG_VERSION")),
+        "\x1b[2mgithub.com/doodad-labs/waf\x1b[0m".to_string(),
+        "".to_string(),
+        format!("Listening on port: {}", settings.listen_port),
+        format!("Webapp URL: {}", settings.webapp_url),
+        "".to_string(),
+        "Configuration loaded successfully.".to_string(),
+        "\n".to_string()
+    ];
+    
+    let divider_length = display.iter()
+        .map(|s| s.len())
+        .max()
+        .unwrap_or(0) + 1; // Add padding for aesthetics
+
+    for line in display {
+
+        if line.is_empty() {
+            println!("\x1b[34m{}\x1b[0m", "─".repeat(divider_length));
+            continue;
+        }
+
+        println!("{}", line);
+        
+    }
 
     proxy::run(&settings).await?;
     Ok(())
@@ -58,7 +84,7 @@ mod tests {
         // Create test config file
         let config_content = r#"
             listen_port = 8080
-            backend_url = "http://localhost:3000"
+            webapp_url = "http://localhost:3000"
             
             [logging]
             log_file = "/var/log/waf-proxy.log"

@@ -1,84 +1,80 @@
 use crate::config;
-use crate::firewall;
+use hyper::{
+    body::to_bytes,
+    client::HttpConnector,
+    header::{HeaderValue, CONNECTION, UPGRADE},
+    Body, Client, Request, Response, Server, Uri,
+    service::{make_service_fn, service_fn},
+};
+use std::convert::Infallible;
+use std::net::SocketAddr;
 
-use futures_util::TryStreamExt;
-use ntex::http;
-use ntex::web;
+async fn proxy(
+    req: Request<Body>,
+    client: Client<HttpConnector>,
+    target: &str,
+) -> Result<Response<Body>, hyper::Error> {
+    let (parts, body) = req.into_parts();
+    let body_bytes = to_bytes(body).await?;
+    
+    // Rewrite the URI to target port 5173 on localhost
+    let uri = format!("{}{}", target, parts.uri.path_and_query().map(|x| x.as_str()).unwrap_or(""))
+        .parse::<Uri>()
+        .unwrap();
 
-const EXCLUDED_HEADERS: &[&str] = &[
-    "host",
-    "content-length", // ntex handles this automatically
-    "connection",
-];
+    let mut proxied_request = Request::from_parts(parts, Body::from(body_bytes));
+    *proxied_request.uri_mut() = uri;
 
-async fn forward(
-    req: web::HttpRequest,
-    body: ntex::util::Bytes,
-    client: web::types::State<http::Client>,
-    forward_url: web::types::State<url::Url>,
-) -> Result<web::HttpResponse, web::Error> {
-
-    // Build the target URL
-    let mut new_url = forward_url.get_ref().clone();
-    new_url.set_path(req.uri().path());
-    new_url.set_query(req.uri().query());
-
-    firewall::inspect(&req, &new_url).await;
-
-    // Create forwarded request
-    let mut forwarded_req = client.request_from(new_url.as_str(), req.head());
-
-    // Copy important headers (optional)
-    for (key, value) in req.headers().iter() {
-        if !EXCLUDED_HEADERS.contains(&key.as_str()) {
-            forwarded_req = forwarded_req.set_header(key.clone(), value.clone());
-        }
-    }
-
-    // Send request and get response
-    let res = forwarded_req
-        .send_body(body)
-        .await
-        .map_err(web::Error::from)?;
-
-    // Build response with all headers and streaming body
-    let mut client_resp = web::HttpResponse::build(res.status());
-
-    // Copy response headers
-    for (key, value) in res.headers().iter() {
-        client_resp.header(key.clone(), value.clone());
-    }
-
-    Ok(client_resp.streaming(res.into_stream()))
+    // Forward the request to the target server
+    client.request(proxied_request).await
 }
 
-pub async fn run(settings: &config::Settings) -> std::io::Result<()> {
+pub async fn run(settings: &config::Settings) -> Result<(), Box<dyn std::error::Error>> {
+
+    let addr = SocketAddr::from(([0, 0, 0, 0], settings.listen_port));
+    let client = Client::new();
+
+    // Create the server and define the service
+    use std::sync::Arc;
+    let settings_clone = Arc::new(settings.clone());
+    let make_svc = make_service_fn(move |_conn| {
+        let client = client.clone();
+        let settings = settings_clone.clone();
+        async {
+            Ok::<_, Infallible>(service_fn(move |req| {
+                let client = client.clone();
+                let settings = settings.clone();
+                async move {
+                    // Check for WebSocket upgrade request
+                    if req.headers().get(UPGRADE).map(|v| v.as_bytes()) == Some(b"websocket") {
+                        let (mut parts, body) = req.into_parts();
+                        let uri = format!("ws://localhost:5173{}", parts.uri.path_and_query().map(|x| x.as_str()).unwrap_or(""))
+                            .parse::<Uri>()
+                            .unwrap();
+                        
+                        parts.uri = uri;
+                        let upgraded_request = Request::from_parts(parts, body);
+                        
+                        return client.request(upgraded_request).await;
+                    }
+                    
+                    proxy(req, client, &settings.webapp_url.clone()).await
+                }
+            }))
+        }
+    });
+
+    let server = Server::bind(&addr).serve(make_svc);
+
     println!(
-        "Proxy server running at http://localhost:{} fowarding to {}",
-        settings.listen_port, settings.backend_url
+        "Proxy server running at http://localhost:{} forwarding to {}",
+        settings.listen_port, settings.webapp_url
     );
 
-    let forward_url = settings.backend_url.to_owned();
-    let forward_url = url::Url::parse(&forward_url)
-        .map_err(|err| std::io::Error::new(std::io::ErrorKind::InvalidData, err))?;
+    // Run the server
+    if let Err(e) = server.await {
+        eprintln!("Server error: {}", e);
+    }
 
-    let server = web::server(move || {
-        web::App::new()
-            .state(http::Client::new())
-            .state(forward_url.clone())
-            .wrap(web::middleware::Logger::default())
-            .default_service(web::route().to(forward))
-    })
-    .bind(("0.0.0.0", settings.listen_port))?;
-
-    let server = if settings.threading.workers > 0 {
-        server.workers(settings.threading.workers.into())
-    } else {
-        server
-    };
-
-    server
-        .run()
-        .await
-        .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err))
+    Ok(())
 }
