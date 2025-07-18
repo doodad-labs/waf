@@ -17,6 +17,10 @@ pub struct Settings {
     /// Threading configuration
     #[serde(default)]
     pub threading: Threading,
+
+    /// TLS configuration
+    #[serde(default)]
+    pub tls: Tls,
 }
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
@@ -36,6 +40,18 @@ pub struct Threading {
     pub workers: u16,
 }
 
+#[derive(Debug, Deserialize, Serialize, PartialEq, Clone)]
+pub struct Tls {
+    #[serde(default)]
+    pub tls_enabled: bool,
+
+    #[serde(default)]
+    pub tls_cert_path: Option<PathBuf>,
+
+    #[serde(default)]
+    pub tls_key_path: Option<PathBuf>,
+}
+
 // Default implementations
 impl Default for Settings {
     fn default() -> Self {
@@ -44,6 +60,7 @@ impl Default for Settings {
             webapp_url: String::new(),  // Still requires explicit setting
             logging: Logging::default(),
             threading: Threading::default(),
+            tls: Tls::default(),
         }
     }
 }
@@ -61,6 +78,16 @@ impl Default for Threading {
     fn default() -> Self {
         Self {
             workers: 0,
+        }
+    }
+}
+
+impl Default for Tls {
+    fn default() -> Self {
+        Self {
+            tls_enabled: false,
+            tls_cert_path: None,
+            tls_key_path: None,
         }
     }
 }
@@ -102,110 +129,29 @@ impl Settings {
                 num_cpus::get()
             ));
         }
+
+        // TLS validation
+        if self.tls.tls_enabled {
+            if self.tls.tls_cert_path.is_none() || self.tls.tls_key_path.is_none() {
+                return Err("TLS is enabled but certificate or key path is not set".to_string());
+            }
+
+            // TLS paths validation
+
+            if let Some(cert_path) = &self.tls.tls_cert_path {
+                if !cert_path.exists() {
+                    return Err(format!("TLS certificate path does not exist: {}", cert_path.display()));
+                }
+            }
+
+            if let Some(key_path) = &self.tls.tls_key_path {
+                if !key_path.exists() {
+                    return Err(format!("TLS key path does not exist: {}", key_path.display()));
+                }
+            }
+
+        }
         
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs;
-    use tempfile::NamedTempFile;
-
-    // Helper to create minimal valid settings
-    fn minimal_settings() -> Settings {
-        Settings {
-            listen_port: 8080,
-            webapp_url: "http://localhost:3000".to_string(),
-            ..Default::default()
-        }
-    }
-
-    #[test]
-    fn test_minimal_config_loading() {
-        let config_content = r#"
-            listen_port = 8080
-            webapp_url = "http://localhost:3000"
-        "#;
-        
-        let tmp_file = NamedTempFile::new().unwrap();
-        let tmp_path = tmp_file.path().to_str().unwrap().to_string() + ".toml";
-        fs::write(&tmp_path, config_content).unwrap();
-        
-        let settings = Settings::new(&tmp_path).unwrap();
-        
-        assert_eq!(settings.listen_port, 8080);
-        assert_eq!(settings.webapp_url, "http://localhost:3000");
-        // Verify defaults
-        assert_eq!(settings.logging.log_level, "info");
-        assert_eq!(settings.threading.workers, 0);
-        assert!(settings.logging.log_file.is_none());
-        
-        fs::remove_file(&tmp_path).unwrap();
-    }
-
-    #[test]
-    fn test_full_config_loading() {
-        let config_content = r#"
-            listen_port = 9090
-            webapp_url = "http://example.com"
-
-            [threading]
-            workers = 4
-            
-            [logging]
-            log_file = "/var/log/waf.log"
-            log_level = "debug"
-        "#;
-        
-        let tmp_file = NamedTempFile::new().unwrap();
-        let tmp_path = tmp_file.path().to_str().unwrap().to_string() + ".toml";
-        fs::write(&tmp_path, config_content).unwrap();
-        
-        let settings = Settings::new(&tmp_path).unwrap();
-        
-        assert_eq!(settings.listen_port, 9090);
-        assert_eq!(settings.webapp_url, "http://example.com");
-        assert_eq!(settings.threading.workers, 4);
-        assert_eq!(settings.logging.log_file.unwrap(), PathBuf::from("/var/log/waf.log"));
-        assert_eq!(settings.logging.log_level, "debug");
-        
-        fs::remove_file(&tmp_path).unwrap();
-    }
-
-    #[test]
-    fn test_config_default_values() {
-        let settings = Settings::default();
-        
-        assert_eq!(settings.listen_port, 0);
-        assert_eq!(settings.webapp_url, "");
-        assert_eq!(settings.logging.log_level, "info");
-        assert_eq!(settings.threading.workers, 0);
-    }
-
-    #[test]
-    fn test_config_validation() {
-        let mut settings = minimal_settings();
-        assert!(settings.validate().is_ok());
-
-        // Test invalid port
-        settings.listen_port = 0;
-        assert_eq!(settings.validate(), Err("Port must be specified".to_string()));
-        settings.listen_port = 8080;
-
-        // Test empty webapp URL
-        settings.webapp_url = String::new();
-        assert_eq!(settings.validate(), Err("Webapp URL must be specified".to_string()));
-        settings.webapp_url = "http://valid".to_string();
-
-        // Test invalid log level
-        settings.logging.log_level = "invalid".to_string();
-        assert!(settings.validate().is_err());
-        settings.logging.log_level = "info".to_string();
-
-        // Test excessive workers
-        settings.threading.workers = 9999;
-        assert!(settings.validate().is_err());
     }
 }

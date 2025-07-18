@@ -45,6 +45,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         format!("Webapp URL: {}", settings.webapp_url),
         format!("WAF URL: http://localhost:{}", settings.listen_port),
         "".to_string(),
+        format!("TLS Enabled: {}", settings.tls.tls_enabled),
+        "".to_string(),
+        format!("Log file: {}", 
+            settings.logging.log_file
+                .as_ref()
+                .map(|p| p.display().to_string())
+                .unwrap_or_else(|| "None".to_string())
+        ),
+        format!("Log level: {}", settings.logging.log_level),
+        "".to_string(),
         "Configuration loaded successfully.".to_string()
     ];
     

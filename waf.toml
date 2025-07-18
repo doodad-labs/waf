@@ -6,5 +6,10 @@ webapp_url = "http://localhost:5173"
 workers = 12 # Set to 0 for auto-detection
 
 [logging]
-log_file = "/var/log/waf.log"
+log_file = "./var/log/waf.log"
 log_level = "warn"
+
+[tls]
+tls_enabled = true
+tls_cert_path = "./env/certificate.crt"
+tls_key_path = "./env/private.key"
