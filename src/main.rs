@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let display = [
         "\n".to_string(),
-        format!("WAF v{}", env!("CARGO_PKG_VERSION")),
+        format!("waf v{}", env!("CARGO_PKG_VERSION")),
         "\x1b[2mgithub.com/doodad-labs/waf\x1b[0m".to_string(),
         "".to_string(),
         format!("Listening on port: {}", settings.listen_port),
