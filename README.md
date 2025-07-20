@@ -20,7 +20,7 @@ For basic testing, generate a self-signed TLS certificate:
 
 ```bash
 openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -days 3650 \
-  -nodes -keyout server.key -out server.crt -subj "/CN=localhost" \
+  -nodes -keyout tls.key -out tls.crt -subj "/CN=localhost" \
   -addext "subjectAltName=DNS:localhost,DNS:*.localhost,IP:127.0.0.1"
 ```  
 
@@ -36,8 +36,8 @@ For a trusted certificate, use [Certbot](https://certbot.eff.org):
 
 2. Copy the certificates to your WAF directory:  
    ```bash
-   sudo cp /etc/letsencrypt/live/<YOUR_DOMAIN>/fullchain.pem ./server.crt  
-   sudo cp /etc/letsencrypt/live/<YOUR_DOMAIN>/privkey.pem ./server.key  
+   sudo cp /etc/letsencrypt/live/<YOUR_DOMAIN>/fullchain.pem ./tls.crt  
+   sudo cp /etc/letsencrypt/live/<YOUR_DOMAIN>/privkey.pem ./tls.key  
    ```  
 
 🔹 **Tip:** Automate renewal with `certbot renew` if using Let’s Encrypt in production.  
