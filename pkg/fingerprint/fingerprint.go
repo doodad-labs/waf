@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/doodad-labs/waf/pkg/ja3"
+	"github.com/doodad-labs/waf/pkg/ja4"
+	"github.com/doodad-labs/waf/pkg/metadata"
 	"github.com/dreadl0ck/tlsx"
-	"github.com/wi1dcard/fingerproxy/pkg/ja3"
-	"github.com/wi1dcard/fingerproxy/pkg/ja4"
-	"github.com/wi1dcard/fingerproxy/pkg/metadata"
 )
 
 var (

@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/doodad-labs/waf/pkg/metadata"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/wi1dcard/fingerproxy/pkg/metadata"
 )
 
 const defaultMetricsPrefix = "fingerproxy"
@@ -17,6 +17,28 @@ var (
 )
 
 type FingerprintFunc func(*metadata.Metadata) (string, error)
+
+// SimpleHeaderInjector is a basic header injector that uses a function to get header values
+type SimpleHeaderInjector struct {
+	HeaderName string
+	ValueFunc  func(*http.Request) string
+}
+
+func (i *SimpleHeaderInjector) GetHeaderName() string {
+	return i.HeaderName
+}
+
+func (i *SimpleHeaderInjector) GetHeaderValue(req *http.Request) (string, error) {
+	return i.ValueFunc(req), nil
+}
+
+// NewHeaderInjector creates a simple header injector with a custom value function
+func NewHeaderInjector(headerName string, valueFunc func(*http.Request) string) *SimpleHeaderInjector {
+	return &SimpleHeaderInjector{
+		HeaderName: headerName,
+		ValueFunc:  valueFunc,
+	}
+}
 
 // FingerprintHeaderInjector implements reverseproxy.HeaderInjector
 type FingerprintHeaderInjector struct {

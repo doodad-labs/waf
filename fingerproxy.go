@@ -16,6 +16,7 @@ import (
 	"github.com/doodad-labs/waf/pkg/certwatcher"
 	"github.com/doodad-labs/waf/pkg/debug"
 	fp "github.com/doodad-labs/waf/pkg/fingerprint"
+	"github.com/doodad-labs/waf/pkg/metadata"
 	"github.com/doodad-labs/waf/pkg/proxyserver"
 	"github.com/doodad-labs/waf/pkg/reverseproxy"
 	"github.com/prometheus/client_golang/prometheus"
@@ -61,6 +62,16 @@ func DefaultHeaderInjectors() []reverseproxy.HeaderInjector {
 	}
 
 	return []reverseproxy.HeaderInjector{
+
+		// Request ID header injector
+		fp.NewHeaderInjector("X-Request-ID", func(req *http.Request) string {
+			if data, ok := metadata.FromContext(req.Context()); ok {
+				return data.RequestID
+			}
+			return ""
+		}),
+
+		// Fingerprint header injectors
 		fp.NewFingerprintHeaderInjector("X-JA3-Fingerprint", fp.JA3Fingerprint),
 		fp.NewFingerprintHeaderInjector("X-JA4-Fingerprint", fp.JA4Fingerprint),
 		fp.NewFingerprintHeaderInjector("X-HTTP2-Fingerprint", h2fp.HTTP2Fingerprint),
