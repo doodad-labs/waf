@@ -17,13 +17,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/google/uuid"
-
-	"github.com/doodad-labs/waf/pkg/hack"
-	"github.com/doodad-labs/waf/pkg/http2"
-	"github.com/doodad-labs/waf/pkg/metadata"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/wi1dcard/fingerproxy/pkg/hack"
+	"github.com/wi1dcard/fingerproxy/pkg/http2"
+	"github.com/wi1dcard/fingerproxy/pkg/metadata"
 )
 
 const defaultMetricsPrefix = "fingerproxy"
@@ -148,10 +146,6 @@ func (server *Server) tlsHandshakeWithTimeout(tlsConn *tls.Conn) error {
 
 func updateConnContext(ctx context.Context, c net.Conn) context.Context {
 	ctx, md := metadata.NewContext(ctx)
-
-	// Generate unique request ID
-	md.RequestID = uuid.New().String()
-
 	if conn, ok := c.(*hack.TLSClientHelloConn); ok {
 		md.ClientHelloRecord = conn.ClientHelloRecord
 		md.ConnectionState = conn.Conn.ConnectionState()

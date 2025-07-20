@@ -18,7 +18,4 @@ type Metadata struct {
 
 	// HTTP2Frames includes certain HTTP2 frames data
 	HTTP2Frames HTTP2FingerprintingFrames
-
-	// RequestID is a unique identifier for this request
-	RequestID string
 }
