@@ -2,7 +2,7 @@
 
 A **high-performance, standalone Web Application Firewall (WAF) proxy** that operates seamlessly between the internet and your backend (PHP, Node.js, Rust, WordPress, etc.). 
 
-Designed for stealth, it leaves minimal footprint by leveraging polymorphic injection filtering, generic blocking rules, and subtle CAPTCHAs that blend into normal traffic—neutralizing threats without revealing defensive measures. Invisible to attackers, uncompromising in protection. WAF build on top of [wi1dcard's fingerprint reverse proxy](https://github.com/wi1dcard/fingerproxy)
+Designed for stealth, it leaves minimal footprint by leveraging polymorphic injection filtering, generic blocking rules, and subtle CAPTCHAs that blend into normal traffic—neutralizing threats without revealing defensive measures. Invisible to attackers, uncompromising in protection. WAF build on top of [wi1dcard's fingerprint reverse proxy](https://github.com/doodad-labs/waf)
 
 ## Planned Features
 

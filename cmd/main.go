@@ -1,6 +1,6 @@
 package main
 
-import "github.com/wi1dcard/fingerproxy"
+import "github.com/doodad-labs/waf"
 
 func main() {
 	fingerproxy.Run()
