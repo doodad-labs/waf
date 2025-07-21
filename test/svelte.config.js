@@ -21,10 +21,7 @@ const config = {
 					return Response.redirect(`https://${request.headers.get('host')}${request.url}`, 301);
 				}
 			}
-		},
-		allowedHosts: [
-			'waf.doodadlabs.org'
-		]
+		}
 	}
 };
 
