@@ -9,6 +9,8 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 type HTTPHandler struct {
@@ -41,7 +43,7 @@ func NewHTTPHandler(to *url.URL, reverseProxy *httputil.ReverseProxy, headerInje
 	f := &HTTPHandler{
 		To:              to,
 		reverseProxy:    reverseProxy,
-		HeaderInjectors: headerInjectors,
+		HeaderInjectors: headerInjectors,	
 	}
 
 	f.reverseProxy.Rewrite = f.rewriteFunc
@@ -52,6 +54,9 @@ func (f *HTTPHandler) rewriteFunc(r *httputil.ProxyRequest) {
 	r.SetURL(f.To)
 	r.Out.Header["X-Forwarded-For"] = r.In.Header["X-Forwarded-For"]
 	r.SetXForwarded()
+
+	uuidV4 := uuid.New().String()
+	r.Out.Header.Set("X-Request-ID", uuidV4)
 
 	if f.PreserveHost {
 		r.Out.Host = r.In.Host
