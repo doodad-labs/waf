@@ -4,7 +4,9 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
-	allowedHosts: [
-		'waf.doodadlabs.org'
-	]
+	server: {
+		allowedHosts: [
+			'waf.doodadlabs.org'
+		]
+	}
 });
