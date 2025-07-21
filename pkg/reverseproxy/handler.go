@@ -4,10 +4,7 @@
 package reverseproxy
 
 import (
-	"fmt"
-	"bytes"
 	"net"
-	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -15,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/doodad-labs/waf/pkg/waf"
 )
 
 type HTTPHandler struct {
@@ -100,33 +98,21 @@ func (f *HTTPHandler) rewriteFunc(r *httputil.ProxyRequest) {
 		}
 	}
 
-	bodyBytes, _ := io.ReadAll(r.In.Body)
-	r.In.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+	RequestScreening, err := waf.RequestScreening(r)
 
-	fmt.Printf(`
-		[WAF INSPECTION] Incoming Request:
-		- Source IP: %s
-		- Method: %s
-		- URL: %s
-		- Headers: %#v
-		- Cookies: %#v
-		- Query: %#v
-		- Body: %q
-		- JA3: %s
-		- JA4: %s
-		- HTTP2 FP: %s
-	`,
-		r.In.RemoteAddr,
-		r.In.Method,
-		r.In.URL.String(),
-		r.In.Header,
-		r.In.Cookies(),
-		r.In.URL.Query(),
-		string(bodyBytes),
-		r.Out.Header.Get("X-JA3-Fingerprint"),
-		r.Out.Header.Get("X-JA4-Fingerprint"),
-		r.Out.Header.Get("X-HTTP2-Fingerprint"),
-	)
+	if err != nil {
+		f.logf("request screening for %s failed: %s", r.In.RemoteAddr, err)
+		r.Out.Body = nil // clear the body to prevent further processing
+		return
+	}
+
+	if !RequestScreening {
+		f.logf("request from %s blocked by WAF", r.In.RemoteAddr)
+		r.Out.Body = nil // clear the body to prevent further processing
+		// TODO set error code
+		//r.Out.StatusCode = http.StatusForbidden
+		return
+	}
 }
 
 func (f *HTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
