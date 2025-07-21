@@ -18,8 +18,6 @@ import (
 	fp "github.com/doodad-labs/waf/pkg/fingerprint"
 	"github.com/doodad-labs/waf/pkg/proxyserver"
 	"github.com/doodad-labs/waf/pkg/reverseproxy"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const logFlags = log.LstdFlags | log.Lshortfile | log.Lmsgprefix
@@ -35,14 +33,10 @@ var (
 
 	ProxyServerLog  = log.New(os.Stderr, "[proxyserver] ", logFlags)
 	HTTPServerLog   = log.New(os.Stderr, "[http] ", logFlags)
-	PrometheusLog   = log.New(os.Stderr, "[metrics] ", logFlags)
 	ReverseProxyLog = log.New(os.Stderr, "[reverseproxy] ", logFlags)
 	FingerprintLog  = log.New(os.Stderr, "[fingerprint] ", logFlags)
 	CertWatcherLog  = log.New(os.Stderr, "[certwatcher] ", logFlags)
 	DefaultLog      = log.New(os.Stderr, "[fingerproxy] ", logFlags)
-
-	// The Prometheus metric registry used by fingerproxy
-	PrometheusRegistry = prometheus.NewRegistry()
 
 	// The header injectors that injects fingerprint headers to forwarding requests,
 	// defaults to [fingerproxy.DefaultHeaderInjectors]
@@ -107,8 +101,6 @@ func defaultProxyServer(ctx context.Context, handler http.Handler, tlsConfig *tl
 	svr.ErrorLog = ProxyServerLog
 	svr.HTTPServer.ErrorLog = HTTPServerLog
 
-	svr.MetricsRegistry = PrometheusRegistry
-
 	svr.HTTPServer.IdleTimeout = parseHTTPIdleTimeout()
 	svr.HTTPServer.ReadTimeout = parseHTTPReadTimeout()
 	svr.HTTPServer.WriteTimeout = parseHTTPWriteTimeout()
@@ -139,7 +131,6 @@ func defaultTLSConfig(cw *certwatcher.CertWatcher) *tls.Config {
 func initFingerprint() {
 	fp.Logger = FingerprintLog
 	fp.VerboseLogs = *flagVerboseLogs
-	fp.RegisterDurationMetric(PrometheusRegistry, parseDurationMetricBuckets(), "")
 }
 
 // Run fingerproxy. To customize the fingerprinting algorithms, use "header injectors".
@@ -170,15 +161,6 @@ func Run() {
 
 	// start cert watcher
 	go cw.Start(ctx)
-
-	// metrics server
-	PrometheusLog.Printf("server listening on %s", *flagMetricsListenAddr)
-	go http.ListenAndServe(
-		*flagMetricsListenAddr,
-		promhttp.HandlerFor(PrometheusRegistry, promhttp.HandlerOpts{
-			ErrorLog: PrometheusLog,
-		}),
-	)
 
 	// debug server if binary build with `debug` tag
 	debug.StartDebugServer()

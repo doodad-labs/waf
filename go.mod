@@ -8,7 +8,7 @@ require (
 	github.com/google/gopacket v1.1.18
 	github.com/prometheus/client_golang v1.18.0
 	github.com/refraction-networking/utls v1.6.0
-	github.com/wi1dcard/fingerproxy v1.2.3
+	github.com/doodad-labs/waf v1.2.3
 	golang.org/x/net v0.19.0
 	golang.org/x/term v0.15.0
 	gopkg.in/yaml.v3 v3.0.1

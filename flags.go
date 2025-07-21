@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -16,9 +14,6 @@ var (
 
 	// tls
 	flagCertFilename, flagKeyFilename *string
-
-	// metrics
-	flagMetricsListenAddr, flagDurationMetricBuckets *string
 
 	// functionality
 	flagPreserveHost              *bool
@@ -58,19 +53,6 @@ func initFlags() {
 		envWithDefault("CERTKEY_FILENAME", "tls.key"),
 		"TLS certificate key file name, equivalent to $CERTKEY_FILENAME",
 	)
-
-	flagMetricsListenAddr = flag.String(
-		"metrics-listen-addr",
-		envWithDefault("METRICS_LISTEN_ADDR", ":9035"),
-		"Listening address of Prometheus metrics, equivalent to $METRICS_LISTEN_ADDR",
-	)
-
-	flagDurationMetricBuckets = flag.String(
-		"duration-metric-buckets",
-		envWithDefault("DURATION_METRIC_BUCKETS", ".00001, .00002, .00005, .0001, .0002, .0005, .001, .005, .01"),
-		"The histogram buckets of duration metric, equivalent to $DURATION_METRIC_BUCKETS",
-	)
-
 	flagPreserveHost = flag.Bool(
 		"preserve-host",
 		envWithDefaultBool("PRESERVE_HOST", false),
@@ -132,7 +114,7 @@ func parseFlags() {
 	flag.Parse()
 
 	if *flagVersion {
-		fmt.Fprintln(os.Stderr, "Fingerproxy - https://github.com/wi1dcard/fingerproxy")
+		fmt.Fprintln(os.Stderr, "Fingerproxy - https://github.com/doodad-labs/waf")
 		fmt.Fprintf(os.Stderr, "Version: %s (%s)\n", BuildTag, BuildCommit)
 		os.Exit(0)
 	}
@@ -145,21 +127,6 @@ func parseForwardURL() *url.URL {
 	}
 
 	return forwardURL
-}
-
-func parseDurationMetricBuckets() []float64 {
-	bucketStrings := strings.Split(*flagDurationMetricBuckets, ",")
-	buckets := []float64{}
-
-	for _, bucket := range bucketStrings {
-		parsedBucket, err := strconv.ParseFloat(strings.Trim(bucket, " "), 64)
-		if err != nil {
-			DefaultLog.Fatalf(`invalid duration metric bucket "%s": %s`, bucket, err)
-		}
-		buckets = append(buckets, parsedBucket)
-	}
-
-	return buckets
 }
 
 func parseReverseProxyFlushInterval() time.Duration {

@@ -17,14 +17,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/wi1dcard/fingerproxy/pkg/hack"
-	"github.com/wi1dcard/fingerproxy/pkg/http2"
-	"github.com/wi1dcard/fingerproxy/pkg/metadata"
+	"github.com/doodad-labs/waf/pkg/hack"
+	"github.com/doodad-labs/waf/pkg/http2"
+	"github.com/doodad-labs/waf/pkg/metadata"
 )
-
-const defaultMetricsPrefix = "fingerproxy"
 
 type Server struct {
 	// required, TLS config that including certificates, etc
@@ -42,17 +38,8 @@ type Server struct {
 	// optional, whether enable verbose and debug logs
 	VerboseLogs bool
 
-	// optional, prometheus metrics registry
-	MetricsRegistry *prometheus.Registry
-
-	// optional, prometheus metrics namespace, aka, prefix
-	MetricsPrefix string
-
 	// optional, TLS handshake timeout, default is infinity
 	TLSHandshakeTimeout time.Duration
-
-	// optional, requests_total metric
-	metricRequestsTotal *prometheus.CounterVec
 
 	// required, immutable base context
 	ctx       context.Context
@@ -93,7 +80,6 @@ func (server *Server) serveConn(conn net.Conn) {
 			server.logf("tls handshake error (%s): %s", conn.RemoteAddr(), err)
 		}
 
-		server.metricsRequestsTotalInc("0", "")
 		return
 	}
 
@@ -101,7 +87,6 @@ func (server *Server) serveConn(conn net.Conn) {
 	rec, err := hijackedConn.GetClientHello()
 	if err != nil {
 		server.logf("could not read client hello (%s): %s", conn.RemoteAddr(), err)
-		server.metricsRequestsTotalInc("0", "")
 		return
 	}
 
@@ -131,7 +116,6 @@ func (server *Server) serveConn(conn net.Conn) {
 		<-ctx.Done()
 	}
 
-	server.metricsRequestsTotalInc("1", cs.NegotiatedProtocol)
 }
 
 func (server *Server) tlsHandshakeWithTimeout(tlsConn *tls.Conn) error {
@@ -178,9 +162,6 @@ func (server *Server) serveHTTP1() {
 func (server *Server) setupServe() {
 	server.mu.Lock()
 	defer server.mu.Unlock()
-
-	// register prometheus metrics
-	server.registerMetrics()
 
 	// ensure the context
 	if server.ctx == nil {
@@ -242,36 +223,6 @@ func (server *Server) ListenAndServe(listenAddr string) error {
 	return server.Serve(ln)
 }
 
-func (server *Server) metricsRegistered() bool {
-	return server.metricRequestsTotal != nil
-}
-
-func (server *Server) metricsRequestsTotalInc(ok string, negotiatedProtocol string) {
-	if server.metricsRegistered() {
-		server.metricRequestsTotal.WithLabelValues(ok, negotiatedProtocol).Inc()
-	}
-}
-
-func (server *Server) registerMetrics() {
-	if server.MetricsRegistry == nil || server.metricsRegistered() {
-		return
-	}
-	pm := promauto.With(server.MetricsRegistry)
-
-	prefix := server.MetricsPrefix
-	if prefix == "" {
-		prefix = defaultMetricsPrefix
-	}
-
-	server.metricRequestsTotal = pm.NewCounterVec(prometheus.CounterOpts{
-		Namespace: prefix,
-		Name:      "requests_total",
-		Help:      "The total number of requests processed by fingerproxy",
-	}, []string{"ok", "negotiated_protocol"})
-
-	// ...
-}
-
 func (server *Server) logf(format string, args ...any) {
 	if server.ErrorLog != nil {
 		server.ErrorLog.Printf(format, args...)
@@ -309,8 +260,8 @@ func NewServer(ctx context.Context, handler http.Handler, tlsConfig *tls.Config)
 // https://github.com/golang/go/blob/release-branch.go1.22/src/net/http/server.go#L3826-L3834
 func tlsRecordHeaderLooksLikeHTTP(hdr [5]byte) bool {
 	switch string(hdr[:]) {
-	case "GET /", "HEAD ", "POST ", "PUT /", "OPTIO":
-		return true
+		case "GET /", "HEAD ", "POST ", "PUT /", "OPTIO":
+			return true
 	}
 	return false
 }

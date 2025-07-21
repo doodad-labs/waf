@@ -5,15 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/wi1dcard/fingerproxy/pkg/metadata"
-)
-
-const defaultMetricsPrefix = "fingerproxy"
-
-var (
-	fingerprintDurationMetric *prometheus.HistogramVec
+	"github.com/doodad-labs/waf/pkg/metadata"
 )
 
 type FingerprintFunc func(*metadata.Metadata) (string, error)
@@ -22,8 +14,6 @@ type FingerprintFunc func(*metadata.Metadata) (string, error)
 type FingerprintHeaderInjector struct {
 	HeaderName                       string
 	FingerprintFunc                  FingerprintFunc
-	FingerprintDurationSucceedMetric prometheus.Observer
-	FingerprintDurationErrorMetric   prometheus.Observer
 }
 
 func NewFingerprintHeaderInjector(headerName string, fingerprintFunc FingerprintFunc) *FingerprintHeaderInjector {
@@ -32,27 +22,7 @@ func NewFingerprintHeaderInjector(headerName string, fingerprintFunc Fingerprint
 		FingerprintFunc: fingerprintFunc,
 	}
 
-	if fingerprintDurationMetric != nil {
-		i.FingerprintDurationSucceedMetric = fingerprintDurationMetric.WithLabelValues("1", headerName)
-		i.FingerprintDurationErrorMetric = fingerprintDurationMetric.WithLabelValues("0", headerName)
-	}
-
 	return i
-}
-
-func RegisterDurationMetric(registry *prometheus.Registry, buckets []float64, prefix string) {
-	pm := promauto.With(registry)
-
-	if prefix == "" {
-		prefix = defaultMetricsPrefix
-	}
-
-	fingerprintDurationMetric = pm.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: prefix,
-		Name:      "fingerprint_duration_seconds",
-		Buckets:   buckets,
-		Help:      "The duration of fingerprinting requests in seconds",
-	}, []string{"ok", "header_name"})
 }
 
 func (i *FingerprintHeaderInjector) GetHeaderName() string {
@@ -69,16 +39,6 @@ func (i *FingerprintHeaderInjector) GetHeaderValue(req *http.Request) (string, e
 	fp, err := i.FingerprintFunc(data)
 	duration := time.Since(start)
 	vlogf("fingerprint duration: %s", duration)
-
-	if err == nil {
-		if i.FingerprintDurationSucceedMetric != nil {
-			i.FingerprintDurationSucceedMetric.Observe(duration.Seconds())
-		}
-	} else {
-		if i.FingerprintDurationErrorMetric != nil {
-			i.FingerprintDurationErrorMetric.Observe(duration.Seconds())
-		}
-	}
 
 	return fp, err
 }

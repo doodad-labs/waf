@@ -20,7 +20,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcapgo"
-	"github.com/wi1dcard/fingerproxy/pkg/ja4"
+	"github.com/doodad-labs/waf/pkg/ja4"
 )
 
 type pcapClientHello struct {
