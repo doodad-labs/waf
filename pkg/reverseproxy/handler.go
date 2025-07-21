@@ -4,6 +4,10 @@
 package reverseproxy
 
 import (
+	"fmt"
+	"bytes"
+	"net"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -44,19 +48,44 @@ func NewHTTPHandler(to *url.URL, reverseProxy *httputil.ReverseProxy, headerInje
 		To:              to,
 		reverseProxy:    reverseProxy,
 		HeaderInjectors: headerInjectors,	
-	}
+	} 
 
 	f.reverseProxy.Rewrite = f.rewriteFunc
 	return f
 }
 
+// getClientIP returns the client's real IP from X-Forwarded-For or RemoteAddr.
+// Returns the first valid IP in X-Forwarded-For (comma-separated list) or RemoteAddr if none found.
+func getClientIP(r *http.Request) string {
+    // 1. Check X-Forwarded-For (could be comma-separated list)
+    xff := r.Header.Get("X-Forwarded-For")
+    if xff != "" {
+        // Split into potential IPs (e.g., "client, proxy1, proxy2")
+        ips := strings.Split(xff, ",")
+        for _, ip := range ips {
+            ip = strings.TrimSpace(ip)
+            if net.ParseIP(ip) != nil { // Validate it's a real IP
+                return ip
+            }
+        }
+    }
+
+    // 2. Fall back to RemoteAddr (format: "IP:port" or "[IPv6]:port")
+    ip, _, err := net.SplitHostPort(r.RemoteAddr)
+    if err != nil {
+        // Handle cases where RemoteAddr has no port (unlikely in HTTP servers)
+        return r.RemoteAddr
+    }
+    return ip
+}
+
 func (f *HTTPHandler) rewriteFunc(r *httputil.ProxyRequest) {
 	r.SetURL(f.To)
-	r.Out.Header["X-Forwarded-For"] = r.In.Header["X-Forwarded-For"]
-	r.SetXForwarded()
+	
+	requestId := uuid.New().String()
 
-	uuidV4 := uuid.New().String()
-	r.Out.Header.Set("X-Request-ID", uuidV4)
+	r.Out.Header.Set("X-Request-ID", requestId)
+	r.Out.Header.Set("X-Forwarded-For", getClientIP(r.In))
 
 	if f.PreserveHost {
 		r.Out.Host = r.In.Host
@@ -70,6 +99,34 @@ func (f *HTTPHandler) rewriteFunc(r *httputil.ProxyRequest) {
 			r.Out.Header.Set(k, v)
 		}
 	}
+
+	bodyBytes, _ := io.ReadAll(r.In.Body)
+	r.In.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	fmt.Printf(`
+		[WAF INSPECTION] Incoming Request:
+		- Source IP: %s
+		- Method: %s
+		- URL: %s
+		- Headers: %#v
+		- Cookies: %#v
+		- Query: %#v
+		- Body: %q
+		- JA3: %s
+		- JA4: %s
+		- HTTP2 FP: %s
+	`,
+		r.In.RemoteAddr,
+		r.In.Method,
+		r.In.URL.String(),
+		r.In.Header,
+		r.In.Cookies(),
+		r.In.URL.Query(),
+		string(bodyBytes),
+		r.Out.Header.Get("X-JA3-Fingerprint"),
+		r.Out.Header.Get("X-JA4-Fingerprint"),
+		r.Out.Header.Get("X-HTTP2-Fingerprint"),
+	)
 }
 
 func (f *HTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {

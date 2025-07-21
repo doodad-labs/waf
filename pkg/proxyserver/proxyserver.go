@@ -252,6 +252,8 @@ func NewServer(ctx context.Context, handler http.Handler, tlsConfig *tls.Config)
 		HTTP2Server: &http2.Server{},
 	}
 
+	fmt.Println("Creating new proxy server...")
+
 	server.ctx, server.ctxCancel = context.WithCancel(ctx)
 
 	return server
